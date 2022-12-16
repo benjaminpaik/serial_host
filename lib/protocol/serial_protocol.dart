@@ -14,7 +14,6 @@ enum SerialKeys {
   numBits,
   stopBits,
   running,
-  watchdogTimeout,
   dataFile,
   recordState,
 }
@@ -34,13 +33,14 @@ const _initConfigData = {
 class SerialApi {
   final txBytes = Uint8List(SerialParse.txPacketMax);
   final _rxBytes = Uint8List(SerialParse.rxPacketMax);
-  bool _watchdogTripped = false;
   int _checksumErrors = 0;
   Completer<SendPort> _sendPortCompleter = Completer<SendPort>();
   SendPort? _sendPort;
   final ReceivePort _receivePort;
   // clone initial config data
   final _configData = {..._initConfigData};
+  var _watchdogTripped = false;
+  bool get watchdogTripped => _watchdogTripped;
 
   SerialApi() : _receivePort = ReceivePort() {
     SerialParse.crc16Generate();
@@ -100,8 +100,6 @@ class SerialApi {
       }
     } else if (data is int) {
       _checksumErrors = data;
-    } else if (data is bool) {
-      _watchdogTripped = data;
     } else if (data is SendPort) {
       _sendPortCompleter.complete(data);
     }
@@ -139,14 +137,10 @@ class SerialApi {
   }
 
   void startWatchdog(int timeout) {
-    if (_sendPort != null) {
-      _sendPort!.send({SerialKeys.watchdogTimeout: timeout});
-    }
     _watchdogTripped = false;
-  }
-
-  bool get watchdogTripped {
-    return _watchdogTripped;
+    Timer(Duration(milliseconds: timeout), () {
+      _watchdogTripped = true;
+    });
   }
 
   int get checksumErrors {
@@ -165,10 +159,7 @@ class SerialApi {
 class _SerialProtocol {
   int errorCount = 0;
 
-  bool _watchdogTripped = false;
   int _commPeriod = SerialParse.defaultPeriod;
-  int _watchdogTimeout = 0;
-  int _watchdogCount = 0;
   int _serialRxIndex = 0;
 
   final _txBytes = Uint8List(SerialParse.txPacketMax);
@@ -326,20 +317,7 @@ class _SerialProtocol {
       // write bytes to the serial tx buffer
       _comPort.write(Uint8List.fromList(List.generate(
           _txBytes[SerialParse.bytesIndex], (index) => _txBytes[index])));
-      // comPort.write(Uint8List.fromList([0x02]));
     }
-  }
-
-  bool _watchdogCounter() {
-    if (_watchdogCount < _watchdogTimeout) {
-      _watchdogCount += _commPeriod;
-      _watchdogTripped = false;
-    }
-    else if(!_watchdogTripped) {
-      _watchdogTripped = true;
-      return true;
-    }
-    return false;
   }
 
   void loadTxData(List<int> data) {
@@ -393,6 +371,7 @@ Future<void> _commIsolate(SendPort sendPort) async {
         if (configData.containsKey(key)) {
           // special actions for received maps
           switch (key) {
+
             case (SerialKeys.running):
               openClosePort = (configData[key] != data[key]);
               break;
@@ -413,11 +392,6 @@ Future<void> _commIsolate(SendPort sendPort) async {
           }
           configData[key] = data[key];
         }
-      }
-      // initialize watchdog
-      if (data.keys.contains(SerialKeys.watchdogTimeout)) {
-        serial._watchdogCount = 0;
-        serial._watchdogTimeout = data[SerialKeys.watchdogTimeout];
       }
       // update the TX rate
       serial.commPeriod = configData[SerialKeys.commPeriod] as int;
@@ -448,9 +422,6 @@ Future<void> _commIsolate(SendPort sendPort) async {
     startTime = DateTime.now().millisecondsSinceEpoch;
     if (startTime - previousTime >= serial._commPeriod) {
       serial._txProtocol();
-      if(serial._watchdogCounter()) {
-        sendPort.send(serial._watchdogTripped);
-      }
       previousTime = startTime;
     }
     if (serial._rxProtocol()) {

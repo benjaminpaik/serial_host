@@ -28,6 +28,7 @@ class _InfoMessage {
   final parameterGet = "parameter retrieval successful";
   final parameterWrite = "parameter send successful";
   final parameterFlash = "parameter flash successful";
+  final bootloader = "bootloader initiated; disconnecting usb";
 }
 
 class _ErrorMessage {
@@ -43,6 +44,7 @@ class _ErrorMessage {
   }
   final networkIdRange = "out of range network ID";
   final networkIdText = "non-numerical network ID";
+  final bootloader = "could not initiate bootloader";
 }
 
 class Message {

@@ -156,7 +156,11 @@ class MenuBar extends StatelessWidget {
                   .saveFile(generateHeaderFile(hostDataModel.configData));
             }
           }),
-      PopupMenuItem(child: const Text("program target"), onTap: () {}),
+      PopupMenuItem(child: const Text("program target"), onTap: () {
+        hostDataModel.initBootloader().then((_) {
+          displayMessage(context, hostDataModel.userMessage);
+        });
+      }),
     ];
 
     final periodTextController = TextEditingController(

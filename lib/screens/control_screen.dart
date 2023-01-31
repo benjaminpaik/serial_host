@@ -2,7 +2,6 @@ import 'package:serial_host/models/host_data_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../definitions.dart';
-import '../models/host_data_model.dart';
 import '../widgets/navigation_widget.dart';
 import '../widgets/oscilloscope_widget.dart';
 
@@ -16,9 +15,9 @@ class ControlPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const MenuBar(),
+        title: const CustomMenuBar(),
       ),
-      drawer: const NavigationDrawer(),
+      drawer: const CustomNavigationDrawer(),
       body: Column(
         children: [
           Expanded(flex: 18, child: OscilloscopePlots()),

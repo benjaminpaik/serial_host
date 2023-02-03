@@ -7,61 +7,8 @@ import '../models/parameter_table_model.dart';
 import '../protocol/serial_parse.dart';
 import 'message_widget.dart';
 
-const controlRoute = '/';
-const parameterRoute = '/parameter';
-const statusRoute = '/status';
-
-class CustomNavigationDrawer extends StatelessWidget {
-  const CustomNavigationDrawer({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          DrawerHeader(
-            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
-            child: Text(
-              'Menu',
-              style: Theme.of(context).textTheme.displayLarge,
-            ),
-          ),
-          ListTile(
-            title: Text(
-              'Control',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            onTap: () {
-              Navigator.pushReplacementNamed(context, controlRoute);
-            },
-          ),
-          ListTile(
-            title: Text(
-              'Parameter',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            onTap: () {
-              Navigator.pushReplacementNamed(context, parameterRoute);
-            },
-          ),
-          ListTile(
-            title: Text(
-              'Status',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            onTap: () {
-              Navigator.pushReplacementNamed(context, statusRoute);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CustomMenuBar extends StatelessWidget {
-  const CustomMenuBar({Key? key}) : super(key: key);
+class TopBar extends StatelessWidget {
+  const TopBar({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -69,110 +16,108 @@ class CustomMenuBar extends StatelessWidget {
     final parameterTableModel =
         Provider.of<ParameterTableModel>(context, listen: false);
 
-    final saveFileMenuText = Selector<HostDataModel, bool>(
-      selector: (_, selectorModel) =>
-          selectorModel.configData.telemetry.isNotEmpty,
-      builder: (context, fileLoaded, child) {
-        return Text(
-          "save file",
-          style: TextStyle(
-            color: fileLoaded ? null : Colors.grey,
-          ),
-        );
-      },
-    );
-
-    final dataFileMenuText = Selector<HostDataModel, bool>(
-      selector: (_, selectorModel) => selectorModel.serial.isRunning,
-      builder: (context, running, child) {
-        return Text(
-          "create data file",
-          style: TextStyle(
-            color: running ? null : Colors.grey,
-          ),
-        );
-      },
-    );
-
-    final fileMenuItems = [
-      PopupMenuItem(
-          child: const Text("open file"),
-          onTap: () {
-            hostDataModel.openConfigFile(() {
-              if (hostDataModel.configData.initialized) {
-                parameterTableModel.initNumParameters(
-                    hostDataModel.configData.parameter.length);
-              }
-              displayMessage(context, hostDataModel.userMessage);
-            });
-          }),
-      PopupMenuItem(
-          child: saveFileMenuText,
-          onTap: () {
-            if (hostDataModel.configData.telemetry.isNotEmpty) {
-              hostDataModel
-                  .saveFile(generateConfigFile(hostDataModel.configData));
+    final openFileMenuItem = PopupMenuItem(
+        child: const Text("open file"),
+        onTap: () {
+          hostDataModel.openConfigFile(() {
+            if (hostDataModel.configData.initialized) {
+              parameterTableModel.initNumParameters(
+                  hostDataModel.configData.parameter.length);
             }
-          }),
-      PopupMenuItem(
-          child: dataFileMenuText,
-          onTap: () {
-            if (hostDataModel.serial.isRunning) {
-              hostDataModel.createDataFile();
-            }
-          }),
-    ];
-
-    final toolsMenuItems = [
-      PopupMenuItem(
-          child: const Text("parse data"),
-          onTap: () {
-            hostDataModel.parseDataFile(
-                true, () => displayMessage(context, hostDataModel.userMessage));
-          }),
-      PopupMenuItem(
-        child: Row(
-          children: [
-            const Text("save byte file"),
-            const Spacer(),
-            Selector<HostDataModel, bool>(
-              selector: (_, selectorModel) => selectorModel.saveByteFile,
-              builder: (context, saveByteFile, child) {
-                return Checkbox(
-                    value: hostDataModel.saveByteFile,
-                    onChanged: (bool? value) {
-                      hostDataModel.saveByteFile = value ?? false;
-                    });
-              },
-            ),
-          ],
-        ),
-      ),
-      PopupMenuItem(
-          child: const Text("create header"),
-          onTap: () {
-            if (hostDataModel.configData.telemetry.isNotEmpty) {
-              hostDataModel
-                  .saveFile(generateHeaderFile(hostDataModel.configData));
-            }
-          }),
-      PopupMenuItem(child: const Text("program target"), onTap: () {
-        hostDataModel.initBootloader().then((_) {
-          displayMessage(context, hostDataModel.userMessage);
+            displayMessage(context, hostDataModel.userMessage);
+          });
         });
-      }),
-    ];
 
-    final periodTextController = TextEditingController(
-        text: hostDataModel.configData.commPeriod.toString());
-    final networkTextController =
-        TextEditingController(text: hostDataModel.networkId.toString());
+    final saveFileMenuItem = PopupMenuItem(
+        child: Selector<HostDataModel, bool>(
+          selector: (_, selectorModel) =>
+          selectorModel.configData.telemetry.isNotEmpty,
+          builder: (context, fileLoaded, child) {
+            return Text(
+              "save file",
+              style: TextStyle(
+                color: fileLoaded ? null : Colors.grey,
+              ),
+            );
+          },
+        ),
+        onTap: () {
+          if (hostDataModel.configData.telemetry.isNotEmpty) {
+            hostDataModel
+                .saveFile(generateConfigFile(hostDataModel.configData));
+          }
+        });
+
+    final createDataFileMenuItem = PopupMenuItem(
+        child: Selector<HostDataModel, bool>(
+          selector: (_, selectorModel) => selectorModel.serial.isRunning,
+          builder: (context, running, child) {
+            return Text(
+              "create data file",
+              style: TextStyle(
+                color: running ? null : Colors.grey,
+              ),
+            );
+          },
+        ),
+        onTap: () {
+          if (hostDataModel.serial.isRunning) {
+            hostDataModel.createDataFile();
+          }
+        });
+
+    final parseDataMenuItem = PopupMenuItem(
+        child: const Text("parse data"),
+        onTap: () {
+          hostDataModel.parseDataFile(
+              true, () => displayMessage(context, hostDataModel.userMessage));
+        });
+
+    final saveByteFileMenuItem = PopupMenuItem(
+      child: Row(
+        children: [
+          const Text("save byte file"),
+          const Spacer(),
+          Selector<HostDataModel, bool>(
+            selector: (_, selectorModel) => selectorModel.saveByteFile,
+            builder: (context, saveByteFile, child) {
+              return Checkbox(
+                  value: hostDataModel.saveByteFile,
+                  onChanged: (bool? value) {
+                    hostDataModel.saveByteFile = value ?? false;
+                  });
+            },
+          ),
+        ],
+      ),
+    );
+
+    final createHeaderMenuItem = PopupMenuItem(
+        child: const Text("create header"),
+        onTap: () {
+          if (hostDataModel.configData.telemetry.isNotEmpty) {
+            hostDataModel
+                .saveFile(generateHeaderFile(hostDataModel.configData));
+          }
+        });
+
+    final programTargetMenuItem = PopupMenuItem(
+        child: const Text("program target"),
+        onTap: () {
+      hostDataModel.initBootloader().then((_) {
+        displayMessage(context, hostDataModel.userMessage);
+      });
+    });
 
     final fileMenu = Padding(
       padding: const EdgeInsets.all(8.0),
       child: PopupMenuButton(
         child: const Text("File"),
-        itemBuilder: (context) => fileMenuItems,
+        itemBuilder: (context) => <PopupMenuItem>[
+          openFileMenuItem,
+          saveFileMenuItem,
+          createDataFileMenuItem,
+        ],
       ),
     );
 
@@ -180,7 +125,12 @@ class CustomMenuBar extends StatelessWidget {
       padding: const EdgeInsets.all(8.0),
       child: PopupMenuButton(
         child: const Text("Tools"),
-        itemBuilder: (context) => toolsMenuItems,
+        itemBuilder: (context) => <PopupMenuItem>[
+          parseDataMenuItem,
+          saveByteFileMenuItem,
+          createHeaderMenuItem,
+          programTargetMenuItem,
+        ],
       ),
     );
 
@@ -254,6 +204,9 @@ class CustomMenuBar extends StatelessWidget {
       child: Text("Tx Period: "),
     );
 
+    final periodTextController = TextEditingController(
+        text: hostDataModel.configData.commPeriod.toString());
+
     final periodInput = Padding(
       padding: const EdgeInsets.all(8.0),
       child: Selector<HostDataModel, int>(
@@ -282,6 +235,9 @@ class CustomMenuBar extends StatelessWidget {
       padding: EdgeInsets.all(8.0),
       child: Text("Network ID: "),
     );
+
+    final networkTextController =
+    TextEditingController(text: hostDataModel.networkId.toString());
 
     final networkIdInput = Padding(
       padding: const EdgeInsets.all(8.0),

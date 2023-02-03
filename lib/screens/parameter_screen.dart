@@ -4,12 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../definitions.dart';
 import '../misc/parameter.dart';
-import '../widgets/navigation_widget.dart';
 import 'package:serial_host/models/parameter_table_model.dart';
 
 class ParameterPage extends StatelessWidget {
-  static const String title = "Parameter";
-  static Icon icon = const Icon(Icons.desktop_windows_outlined);
 
   const ParameterPage({Key? key}) : super(key: key);
 
@@ -19,60 +16,54 @@ class ParameterPage extends StatelessWidget {
         Provider.of<ParameterTableModel>(context, listen: false);
     final hostDataModel = Provider.of<HostDataModel>(context, listen: false);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const CustomMenuBar(),
-      ),
-      drawer: const CustomNavigationDrawer(),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 5,
-            child: Row(
-              children: const [
-                ParameterTable(),
-              ],
-            ),
+    return Column(
+      children: [
+        Expanded(
+          flex: 5,
+          child: Row(
+            children: const [
+              ParameterTable(),
+            ],
           ),
-          Expanded(
-            child: Row(
-              children: [
-                const Spacer(flex: 2),
-                ElevatedButton(
-                  child: const Text("get parameters"),
-                  onPressed: () {
-                    hostDataModel.getParametersUserSequence().then((success) {
-                      if (success) {
-                        parameterTableModel.updateTable();
-                      }
-                      displayMessage(context, hostDataModel.userMessage);
-                    });
-                  },
-                ),
-                const Spacer(),
-                ElevatedButton(
-                  child: const Text("send parameters"),
-                  onPressed: () {
-                    hostDataModel.sendParameters().then((_) {
-                      displayMessage(context, hostDataModel.userMessage);
-                    });
-                  },
-                ),
-                const Spacer(),
-                ElevatedButton(
-                  child: const Text("flash parameters"),
-                  onPressed: () {
-                    hostDataModel.flashParameters().then((_) {
-                      displayMessage(context, hostDataModel.userMessage);
-                    });
-                  },
-                ),
-                const Spacer(flex: 2),
-              ],
-            ),
+        ),
+        Expanded(
+          child: Row(
+            children: [
+              const Spacer(flex: 2),
+              ElevatedButton(
+                child: const Text("get parameters"),
+                onPressed: () {
+                  hostDataModel.getParametersUserSequence().then((success) {
+                    if (success) {
+                      parameterTableModel.updateTable();
+                    }
+                    displayMessage(context, hostDataModel.userMessage);
+                  });
+                },
+              ),
+              const Spacer(),
+              ElevatedButton(
+                child: const Text("send parameters"),
+                onPressed: () {
+                  hostDataModel.sendParameters().then((_) {
+                    displayMessage(context, hostDataModel.userMessage);
+                  });
+                },
+              ),
+              const Spacer(),
+              ElevatedButton(
+                child: const Text("flash parameters"),
+                onPressed: () {
+                  hostDataModel.flashParameters().then((_) {
+                    displayMessage(context, hostDataModel.userMessage);
+                  });
+                },
+              ),
+              const Spacer(flex: 2),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

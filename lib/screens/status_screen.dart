@@ -1,29 +1,20 @@
 import 'package:serial_host/models/host_data_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../widgets/navigation_widget.dart';
 
 class StatusPage extends StatelessWidget {
-  static const String title = 'Control';
-  static Icon icon = const Icon(Icons.code);
 
   const StatusPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const CustomMenuBar(),
-      ),
-      drawer: const CustomNavigationDrawer(),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const StatusSelector(),
-          StatusBitList(),
-          const Spacer(),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const StatusSelector(),
+        StatusBitList(),
+        const Spacer(),
+      ],
     );
   }
 }

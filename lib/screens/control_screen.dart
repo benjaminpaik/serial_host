@@ -2,32 +2,23 @@ import 'package:serial_host/models/host_data_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../definitions.dart';
-import '../widgets/navigation_widget.dart';
 import '../widgets/oscilloscope_widget.dart';
 
 class ControlPage extends StatelessWidget {
-  static const String title = 'Control';
-  static Icon icon = const Icon(Icons.code);
 
   const ControlPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const CustomMenuBar(),
-      ),
-      drawer: const CustomNavigationDrawer(),
-      body: Column(
-        children: [
-          Expanded(flex: 18, child: OscilloscopePlots()),
-          const Spacer(),
-          const Expanded(flex: 2, child: CmdInput()),
-          const Spacer(),
-          Expanded(flex: 2, child: CmdButtons()),
-          const Spacer(),
-        ],
-      ),
+    return Column(
+      children: [
+        Expanded(flex: 18, child: OscilloscopePlots()),
+        const Spacer(),
+        const Expanded(flex: 2, child: CmdInput()),
+        const Spacer(),
+        Expanded(flex: 2, child: CmdButtons()),
+        const Spacer(),
+      ],
     );
   }
 }

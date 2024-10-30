@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:serial_host/misc/parameter.dart';
 import 'package:serial_host/misc/telemetry.dart';
 
@@ -23,12 +21,6 @@ enum ConfigCommandKeys {
   max,
   min,
   modes,
-}
-
-enum ConfigParameterKeys {
-  name,
-  type,
-  value,
 }
 
 class ConfigData {
@@ -95,10 +87,46 @@ class ConfigData {
     return _commandMin;
   }
 
+  Map<String, dynamic> toMap() {
+    final serialMap = {
+      ConfigSerialKeys.baud: baudRate,
+      ConfigSerialKeys.period: commPeriod,
+      ConfigSerialKeys.device: _deviceId,
+    };
+
+    final commandMap = {
+      ConfigCommandKeys.max.name: commandMax,
+      ConfigCommandKeys.min.name: commandMin,
+      ConfigCommandKeys.modes.name: modes,
+    };
+
+    final telemetryList = telemetry.map((e) {
+      return {
+        TelemetryKeys.name.name: e.name,
+        TelemetryKeys.max.name: e.max,
+        TelemetryKeys.min.name: e.min,
+        TelemetryKeys.type.name: e.type,
+        TelemetryKeys.scale.name: e.scale,
+        TelemetryKeys.color.name: e.color,
+        TelemetryKeys.display.name: e.display,
+      };
+    });
+
+    final parameterList = parameter.map((e) => e.toMap());
+
+    return {
+      ConfigKeys.serial.name: serialMap,
+      ConfigKeys.command.name: commandMap,
+      ConfigKeys.telemetry.name: telemetryList,
+      ConfigKeys.status.name: status.toMap(),
+      ConfigKeys.parameters.name: parameterList,
+    };
+  }
+
   void updateFromNewConfig(ConfigData newConfig) {
     _baudRate = newConfig.baudRate;
-    _commPeriod = newConfig._commPeriod;
-    _deviceId = newConfig._deviceId;
+    _commPeriod = newConfig.commPeriod;
+    _deviceId = newConfig.deviceId;
     _commandMax = newConfig.commandMax;
     _commandMin = newConfig.commandMin;
     modes = newConfig.modes;
@@ -116,40 +144,6 @@ class ConfigData {
     }
   }
 
-  Map toMap() {
-
-    final serialMap = {
-      ConfigSerialKeys.baud.name: baudRate,
-      ConfigSerialKeys.period.name: _commPeriod,
-      ConfigSerialKeys.device.name: _deviceId,
-    };
-
-    final commandMap = {
-      ConfigCommandKeys.max.name: commandMax,
-      ConfigCommandKeys.min.name: commandMin,
-      ConfigCommandKeys.modes.name: modes,
-    };
-
-    final telemetryList = telemetry.map((e) {
-      return {
-        TelemetryKeys.name.name: e.name,
-        TelemetryKeys.max.name: e.max,
-        TelemetryKeys.min.name: e.min,
-        TelemetryKeys.type.name: e.type.name,
-        TelemetryKeys.scale.name: e.scale,
-        TelemetryKeys.color.name: e.color,
-        TelemetryKeys.display.name: e.display.toString(),
-      };
-    });
-
-    return {
-      ConfigKeys.serial.name: serialMap,
-      ConfigKeys.command.name: commandMap,
-      ConfigKeys.telemetry.name: telemetryList,
-      ConfigKeys.status.name: status.toMap(),
-    };
-  }
-
   static ConfigData fromMap(Map configMap) {
     final configData = ConfigData();
 
@@ -157,45 +151,29 @@ class ConfigData {
     var serialMap = configMap[ConfigKeys.serial.name];
     try {
       serialMap = serialMap as Map;
-    }
-    catch(e) {
+    } catch (e) {
       throw const FormatException("invalid serial settings");
     }
 
     try {
       final baudRate = serialMap[ConfigSerialKeys.baud.name] as int;
-      if(SerialParse.validBaudRates.contains(baudRate)) {
-        configData.baudRate = baudRate;
-      }
-      else {
-        throw Exception();
-      }
-    } catch(e) {
-      throw const FormatException("invalid serial baudrate");
+      configData.baudRate = baudRate;
+    } catch (e) {
+      throw const FormatException("invalid baud rate");
     }
 
     try {
-      final period = serialMap[ConfigSerialKeys.period.name] as int;
-      if(period > 0 && period <= SerialParse.maxPeriod) {
-        configData.commPeriod = period;
-      }
-      else {
-        throw Exception();
-      }
-    } catch(e) {
-      throw const FormatException("invalid serial period");
+      final commPeriod = serialMap[ConfigSerialKeys.period.name] as int;
+      configData.commPeriod = commPeriod;
+    } catch (e) {
+      throw const FormatException("invalid period");
     }
 
     try {
       final deviceId = serialMap[ConfigSerialKeys.device.name] as int;
-      if(deviceId >= SerialParse.deviceIdMin && deviceId <= SerialParse.deviceIdMax) {
-        configData._deviceId = deviceId;
-      }
-      else {
-        throw Exception();
-      }
-    } catch(e) {
-      throw const FormatException("invalid device id");
+      configData.deviceId = deviceId;
+    } catch (e) {
+      throw const FormatException("invalid device ID");
     }
 
     // parse command settings
@@ -235,15 +213,8 @@ class ConfigData {
       try {
         var telemetryMap = telemetryList[i]
             .map((k, v) => MapEntry(telemetryStringEnumMap[k]!, v));
-        final colorString = telemetryMap[TelemetryKeys.color];
-        final typeString = telemetryMap[TelemetryKeys.type];
-        // convert string values to different types
-        telemetryMap[TelemetryKeys.color] = colorMap[colorString];
-        telemetryMap[TelemetryKeys.type] =
-            (typeString == TelemetryType.float.name)
-                ? TelemetryType.float
-                : TelemetryType.int;
-        configData.telemetry.add(Telemetry.fromMap(telemetryMap));
+        final telemetryValue = Telemetry.fromMap(telemetryMap);
+        configData.telemetry.add(telemetryValue);
       } catch (e) {
         throw FormatException("invalid telemetry at index $i");
       }
@@ -253,12 +224,13 @@ class ConfigData {
     var statusMap = <String, dynamic>{};
     try {
       statusMap = Map<String, dynamic>.from(configMap[ConfigKeys.status.name]);
-    }
-    catch(e) {
+    } catch (e) {
       throw const FormatException("invalid status settings");
     }
     configData.status = BitStatus.fromMap(statusMap);
 
+    final parameterStringEnumMap = Map<String, ParameterKeys>.fromEntries(
+        ParameterKeys.values.map((e) => MapEntry(e.name, e)));
     // parse parameter settings
     var parameterList = <Map>[];
     try {
@@ -267,36 +239,17 @@ class ConfigData {
       throw const FormatException("invalid parameter settings");
     }
 
-    var parameterError = "";
     for (int i = 0; i < parameterList.length; i++) {
       try {
-        final parameter = Parameter();
-        final parameterMap = parameterList[i];
-
-        parameter.name = parameterMap[ConfigParameterKeys.name.name];
-        parameter.type = (parameterMap[ConfigParameterKeys.type.name] ==
-                ParameterType.float.name)
-            ? ParameterType.float
-            : ParameterType.int;
-
-        final parameterValue = parameterMap[ConfigParameterKeys.value.name];
-
-        final byteData = ByteData(4);
-        if (parameter.type == ParameterType.float &&
-            parameterValue.runtimeType == double) {
-          byteData.setFloat32(0, parameterValue);
-        } else if (parameter.type == ParameterType.int &&
-            parameterValue.runtimeType == int) {
-          byteData.setInt32(0, parameterValue);
+        if (parameterList[i].keys.first.runtimeType == String) {
+          final parameterMap = parameterList[i]
+              .map((k, v) => MapEntry(parameterStringEnumMap[k]!, v));
+          configData.parameter.add(Parameter.fromConfigMap(parameterMap));
         } else {
-          parameterError = " - type mismatch";
-          throw const FormatException();
+          configData.parameter.add(Parameter.fromConfigMap(parameterList[i]));
         }
-        parameter.currentValue = byteData.getInt32(0);
-        parameter.fileValue = parameter.currentValue;
-        configData.parameter.add(parameter);
       } catch (e) {
-        throw FormatException("invalid parameter at index $i$parameterError");
+        throw FormatException("invalid parameter at index $i - type mismatch");
       }
     }
     return configData;

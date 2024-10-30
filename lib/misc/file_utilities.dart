@@ -6,9 +6,9 @@ import 'dart:typed_data';
 import 'package:serial_host/misc/config_data.dart';
 import 'package:serial_host/misc/parameter.dart';
 import 'package:serial_host/misc/telemetry.dart';
+import 'package:serial_host/protocol/serial_parse.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:serial_host/protocol/serial_parse.dart';
 
 const newline = "\n";
 const indent = "  ";
@@ -80,6 +80,7 @@ Future<void> createDataFileIsolate(SendPort sendPort) async {
 }
 
 Future<void> parseDataFileIsolate(SendPort sendPort) async {
+  String userMessage = "";
   String rawDataFile = "";
   bool configReceived = false, saveByteFile = false;
   ConfigData configData = ConfigData();
@@ -92,7 +93,11 @@ Future<void> parseDataFileIsolate(SendPort sendPort) async {
     } else if (data is bool) {
       saveByteFile = data;
     } else if (data is Map) {
-      configData = ConfigData.fromMap(data);
+      try {
+        configData = ConfigData.fromMap(data);
+      } catch (e) {
+        userMessage = e.toString();
+      }
       configReceived = true;
     }
   });
@@ -102,20 +107,21 @@ Future<void> parseDataFileIsolate(SendPort sendPort) async {
     await Future.delayed(Duration.zero);
   }
 
-  if (rawDataFile.isEmpty) {
-    final selectedFile =
-        await FilePicker.platform.pickFiles(dialogTitle: 'open data file');
-    rawDataFile = selectedFile?.files.single.path ?? "";
-  }
-
-  if (rawDataFile.isNotEmpty) {
-    try {
-      await convertDataFile(configData, rawDataFile, saveByteFile);
-      sendPort.send("");
-    } on Exception catch (e, _) {
-      sendPort.send(e.toString());
+  if (userMessage.isEmpty) {
+    if (rawDataFile.isEmpty) {
+      final selectedFile =
+          await FilePicker.platform.pickFiles(dialogTitle: 'open data file');
+      rawDataFile = selectedFile?.files.single.path ?? "";
+    }
+    if (rawDataFile.isNotEmpty) {
+      try {
+        await convertDataFile(configData, rawDataFile, saveByteFile);
+      } on Exception catch (e, _) {
+        userMessage = e.toString();
+      }
     }
   }
+  sendPort.send(userMessage);
   receivePort.close();
 }
 
@@ -125,9 +131,12 @@ String generateConfigFile(ConfigData configData) {
 
   // add serial data
   inputText += "${ConfigKeys.serial.name}: $newline";
-  inputText += "$indent${ConfigSerialKeys.baud.name}: ${configData.baudRate} $newline";
-  inputText += "$indent${ConfigSerialKeys.period.name}: ${configData.commPeriod} $newline";
-  inputText += "$indent${ConfigSerialKeys.device.name}: ${configData.deviceId} $newline";
+  inputText +=
+      "$indent${ConfigSerialKeys.baud.name}: ${configData.baudRate} $newline";
+  inputText +=
+      "$indent${ConfigSerialKeys.period.name}: ${configData.commPeriod} $newline";
+  inputText +=
+      "$indent${ConfigSerialKeys.device.name}: ${configData.deviceId} $newline";
   inputText += newline;
 
   // add command data
@@ -184,12 +193,13 @@ String generateConfigFile(ConfigData configData) {
     final parameter = configData.parameter[i];
     inputText += "$indent- # $i $newline";
     inputText +=
-        "${indent * 2}${ConfigParameterKeys.name.name}: ${parameter.name} $newline";
+        "${indent * 2}${ParameterKeys.name.name}: ${parameter.name} $newline";
     inputText +=
-        "${indent * 2}${ConfigParameterKeys.type.name}: ${parameter.type.name} $newline";
+        "${indent * 2}${ParameterKeys.type.name}: ${parameter.type.name} $newline";
     inputText +=
-        "${indent * 2}${ConfigParameterKeys.value.name}: ${parameter.currentString} $newline";
+        "${indent * 2}${ParameterKeys.value.name}: ${parameter.currentString} $newline";
   }
+
   return inputText;
 }
 
@@ -301,7 +311,6 @@ String parseDataRow(
   // convert a row of bytes into 32-bit integers
   for (int i = 0; i < configData.telemetry.length; i++) {
     int startIndex = SerialParse.dataStartIndex + (4 * stateIndex);
-    // parse bytes
     byteData.setUint8(0, bytes[startIndex]);
     byteData.setUint8(1, bytes[startIndex + 1]);
     byteData.setUint8(2, bytes[startIndex] + 2);

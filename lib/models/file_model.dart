@@ -9,7 +9,6 @@ import '../misc/file_utilities.dart';
 import '../protocol/serial_protocol.dart';
 
 class FileModel extends ChangeNotifier {
-
   final SerialApi _serial;
   final ConfigData _configData;
 
@@ -41,6 +40,7 @@ class FileModel extends ChangeNotifier {
       default:
         break;
     }
+    notifyListeners();
   }
 
   RecordState get recordState {
@@ -122,5 +122,4 @@ class FileModel extends ChangeNotifier {
   String get userMessage {
     return _userMessage;
   }
-
 }

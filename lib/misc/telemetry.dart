@@ -111,7 +111,9 @@ class Telemetry {
   }
 
   String get typeString {
-    return (type == TelemetryType.float) ? TelemetryType.float.name : TelemetryType.int.name;
+    return (type == TelemetryType.float)
+        ? TelemetryType.float.name
+        : TelemetryType.int.name;
   }
 
   String get colorString {
@@ -119,20 +121,19 @@ class Telemetry {
     return result ?? colorMap.keys.first;
   }
 
-  Map<TelemetryKeys, dynamic> toMap() {
-    return {
-      TelemetryKeys.value: _value,
-      TelemetryKeys.name: _name,
-      TelemetryKeys.max: _max,
-      TelemetryKeys.min: _min,
-      TelemetryKeys.type: _type,
-      TelemetryKeys.scale: _scale,
-      TelemetryKeys.color: color,
-      TelemetryKeys.display: display,
-    };
-  }
-
   static Telemetry fromMap(Map<TelemetryKeys, dynamic> map) {
+    final type = map[TelemetryKeys.type];
+    if (type.runtimeType == String) {
+      map[TelemetryKeys.type] = (type.contains(TelemetryType.float.name))
+          ? TelemetryType.float
+          : TelemetryType.int;
+    }
+
+    final color = map[TelemetryKeys.color];
+    if (color.runtimeType == String) {
+      map[TelemetryKeys.color] = colorMap[color] ?? Colors.black;
+    }
+
     return Telemetry(
         map[TelemetryKeys.name],
         map[TelemetryKeys.max],
@@ -209,12 +210,12 @@ class BitStatus {
   }
 
   Map<String, dynamic> toMap() {
-    final statusFieldsMap =
-    List<Map<String, dynamic>>.generate(numFields, (int index) =>
-    {
-      StatusFieldKeys.name.name: fieldName(index),
-      StatusFieldKeys.bits.name: numBits(index),
-    });
+    final statusFieldsMap = List<Map<String, dynamic>>.generate(
+        numFields,
+        (int index) => {
+              StatusFieldKeys.name.name: fieldName(index),
+              StatusFieldKeys.bits.name: numBits(index),
+            });
 
     return {
       StatusBitKeys.state.name: stateName,
